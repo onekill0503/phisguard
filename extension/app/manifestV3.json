@@ -1,0 +1,40 @@
+{
+	"name": "PhisGuard",
+	"description": "Understand Ethereum transactions before risking assets. Simulate actions and spot scams to avoid mistakes before signing anything.",
+	"version": "0.0.0",
+	"manifest_version": 3,
+	"action": {
+		"default_icon": {
+			"128": "img/head-not-active.png"
+		},
+		"default_title": "PhisGuard"
+	},
+	"background": {
+		"service_worker": "./js/backgroundServiceWorker.js",
+		"type": "module"
+	},
+	"icons": {
+		"128": "img/head.png",
+		"400": "img/LOGOA_400x400.png"
+	},
+	"permissions": [
+		"activeTab",
+		"storage",
+		"scripting",
+		"declarativeNetRequest"
+	],
+	"web_accessible_resources": [
+		{
+			"resources": ["vendor/*", "js/*", "inpage/*"],
+			"matches": ["<all_urls>"]
+		}
+	],
+	"content_security_policy": {
+		"extension_pages": "script-src 'self'; object-src 'self'"
+	},
+	"host_permissions": [
+		"file://*/*",
+		"http://*/*",
+		"https://*/*"
+	]
+}
