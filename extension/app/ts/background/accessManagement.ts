@@ -1,18 +1,18 @@
-import { getActiveAddress, getActiveAddressesForAllTabs, websiteSocketToString } from './backgroundUtils.js'
-import { getActiveAddressEntry, getActiveAddresses } from './metadataUtils.js'
-import { requestAccessFromUser } from './windows/interceptorAccess.js'
-import { retrieveWebsiteDetails, updateExtensionIcon } from './iconHandler.js'
-import { TabConnection, WebsiteTabConnections } from '../types/user-interface-types.js'
-import { InpageScriptCallBack, Settings } from '../types/interceptor-messages.js'
-import { getSettings, getWebsiteAccess, updateWebsiteAccess } from './settings.js'
-import { sendSubscriptionReplyOrCallBack } from './messageSending.js'
 import { Simulator } from '../simulation/simulator.js'
-import { WebsiteSocket } from '../utils/requests.js'
+import { AddressBookEntries, AddressBookEntry } from '../types/addressBookTypes.js'
+import { InpageScriptCallBack, Settings } from '../types/interceptor-messages.js'
+import { TabConnection, WebsiteTabConnections } from '../types/user-interface-types.js'
 import { Website, WebsiteAccessArray, WebsiteAddressAccess } from '../types/websiteAccessTypes.js'
+import { WebsiteSocket } from '../utils/requests.js'
+import { Semaphore } from '../utils/semaphore.js'
 import { getUniqueItemsByProperties, replaceElementInReadonlyArray } from '../utils/typed-arrays.js'
 import { modifyObject } from '../utils/typescript.js'
-import { AddressBookEntries, AddressBookEntry } from '../types/addressBookTypes.js'
-import { Semaphore } from '../utils/semaphore.js'
+import { getActiveAddress, getActiveAddressesForAllTabs, websiteSocketToString } from './backgroundUtils.js'
+import { retrieveWebsiteDetails } from './iconHandler.js'
+import { sendSubscriptionReplyOrCallBack } from './messageSending.js'
+import { getActiveAddressEntry, getActiveAddresses } from './metadataUtils.js'
+import { getSettings, getWebsiteAccess, updateWebsiteAccess } from './settings.js'
+import { requestAccessFromUser } from './windows/interceptorAccess.js'
 
 function getConnectionDetails(websiteTabConnections: WebsiteTabConnections, socket: WebsiteSocket) {
 	const identifier = websiteSocketToString(socket)
@@ -88,8 +88,7 @@ export function hasAddressAccess(websiteAccess: WebsiteAccessArray, websiteOrigi
 					}
 				}
 			}
-			if (address.askForAddressAccess === false) return 'hasAccess'
-			return 'notFound'
+			return 'hasAccess'
 		}
 	}
 	return 'notFound'
@@ -102,9 +101,6 @@ function getAddressAccesses(websiteAccess: WebsiteAccessArray, websiteOrigin: st
 		}
 	}
 	return []
-}
-function getAddressesThatDoNotNeedIndividualAccesses(activeAddressEntries: AddressBookEntries) : AddressBookEntries {
-	return activeAddressEntries.filter((x) => x.askForAddressAccess === false)
 }
 
 export async function setInterceptorDisabledForWebsite(website: Website, interceptorDisabled: boolean) {
@@ -151,9 +147,8 @@ async function getActiveAddressForDomain(websiteOrigin: string, settings: Settin
 	return undefined
 }
 
-function connectToPort(websiteTabConnections: WebsiteTabConnections, socket: WebsiteSocket, websiteOrigin: string, settings: Settings, connectWithActiveAddress: bigint | undefined): true {
+function connectToPort(websiteTabConnections: WebsiteTabConnections, socket: WebsiteSocket, _: string, settings: Settings, connectWithActiveAddress: bigint | undefined): true {
 	setWebsitePortApproval(websiteTabConnections, socket, true)
-	updateExtensionIcon(websiteTabConnections, socket.tabId, websiteOrigin)
 
 	sendSubscriptionReplyOrCallBack(websiteTabConnections, socket, { type: 'result' as const, method: 'connect', result: [settings.activeRpcNetwork.chainId] })
 
@@ -162,23 +157,22 @@ function connectToPort(websiteTabConnections: WebsiteTabConnections, socket: Web
 
 	sendSubscriptionReplyOrCallBack(websiteTabConnections, socket, { type: 'result' as const, method: 'chainChanged', result: settings.activeRpcNetwork.chainId })
 
-	if (!settings.simulationMode || settings.useSignersAddressAsActiveAddress) {
+	if (settings.useSignersAddressAsActiveAddress) {
 		sendSubscriptionReplyOrCallBack(websiteTabConnections, socket, { type: 'result' as const, method: 'request_signer_to_eth_requestAccounts', result: [] })
 		sendSubscriptionReplyOrCallBack(websiteTabConnections, socket, { type: 'result' as const, method: 'request_signer_chainId', result: [] })
 	}
 	return true
 }
 
-function disconnectFromPort(websiteTabConnections: WebsiteTabConnections, socket: WebsiteSocket, websiteOrigin: string): false {
+function disconnectFromPort(websiteTabConnections: WebsiteTabConnections, socket: WebsiteSocket, _: string): false {
 	setWebsitePortApproval(websiteTabConnections, socket, false)
-	updateExtensionIcon(websiteTabConnections, socket.tabId, websiteOrigin)
 	sendSubscriptionReplyOrCallBack(websiteTabConnections, socket, { type: 'result' as const, method: 'disconnect', result: [] })
 	return false
 }
 
 export async function getAssociatedAddresses(settings: Settings, websiteOrigin: string, activeAddress: AddressBookEntry | undefined) : Promise<AddressBookEntries> {
 	const addressAccess = await Promise.all(getAddressAccesses(settings.websiteAccess, websiteOrigin).filter((x) => x.access).map((x) => x.address).map((x) => getActiveAddressEntry(x)))
-	const allAccessAddresses = getAddressesThatDoNotNeedIndividualAccesses(await getActiveAddresses())
+	const allAccessAddresses = await getActiveAddresses()
 	const all = allAccessAddresses.concat(addressAccess).concat(activeAddress === undefined ? [] : [activeAddress])
 	return getUniqueItemsByProperties(all, ['address'])
 }
@@ -196,7 +190,6 @@ async function updateTabConnections(simulator: Simulator, websiteTabConnections:
 		const connection = tabConnection.connections[key]
 		if (connection === undefined) throw new Error('missing connection')
 		const currentActiveAddress = await getActiveAddress(settings, connection.socket.tabId)
-		updateExtensionIcon(websiteTabConnections, connection.socket.tabId, connection.websiteOrigin)
 		const access = currentActiveAddress ? hasAddressAccess(settings.websiteAccess, connection.websiteOrigin, currentActiveAddress) : hasAccess(settings.websiteAccess, connection.websiteOrigin)
 
 		if (access !== 'hasAccess' && connection.approved) {

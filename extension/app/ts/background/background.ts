@@ -16,12 +16,12 @@ import { sendActiveAccountChangeToApprovedWebsitePorts, sendMessageToApprovedWeb
 import { getActiveAddress, sendPopupMessageToOpenWindows } from './backgroundUtils.js'
 import { replyToInterceptedRequest } from './messageSending.js'
 import { getActiveAddressEntry } from './metadataUtils.js'
-import { addOrModifyAddressBookEntry, allowOrPreventAddressAccessForWebsite, blockOrAllowExternalRequests, changeActiveAddress, changeAddOrModifyAddressWindowState, changeChainDialog, changeInterceptorAccess, changePage, confirmDialog, confirmRequestAccess, disableInterceptor, forceSetGasLimitForTransaction, getAddressBookData, interceptorAccessChangeAddressOrRefresh, openNewTab, openWebPage, popupChangeActiveRpc, popupfetchAbiAndNameFromBlockExplorer, refreshHomeData, refreshPopupConfirmTransactionMetadata, removeAddressBookEntry, removeTransactionOrSignedMessage, requestAccountsFromSigner, setNewRpcList } from './popupMessageHandlers.js'
+import { addOrModifyAddressBookEntry, allowOrPreventAddressAccessForWebsite, blockOrAllowExternalRequests, changeActiveAddress, changeAddOrModifyAddressWindowState, changeChainDialog, changeInterceptorAccess, changePage, confirmDialog, confirmRequestAccess, forceSetGasLimitForTransaction, getAddressBookData, interceptorAccessChangeAddressOrRefresh, openNewTab, openWebPage, popupChangeActiveRpc, refreshHomeData, refreshPopupConfirmTransactionMetadata, removeAddressBookEntry, removeTransactionOrSignedMessage, requestAccountsFromSigner, setNewRpcList } from './popupMessageHandlers.js'
 import { connectedToSigner, ethAccountsReply, signerChainChanged, signerReply, walletSwitchEthereumChainReply } from './providerMessageHandlers.js'
-import { changeSimulationMode, getSettings } from './settings.js'
-import { blockNumber, call, chainId, estimateGas, gasPrice, getAccounts, getBalance, getBlockByHash, getBlockByNumber, getCode, getTransactionByHash, getTransactionCount, getTransactionReceipt, handleIterceptorError, netVersion, personalSign, sendTransaction, subscribe, unsubscribe, web3ClientVersion } from './simulationModeHanders.js'
+import { getSettings } from './settings.js'
+import { blockNumber, call, chainId, estimateGas, gasPrice, getAccounts, getBalance, getBlockByHash, getBlockByNumber, getTransactionByHash, getTransactionCount, getTransactionReceipt, handleIterceptorError, netVersion, personalSign, sendTransaction, web3ClientVersion } from './simulationModeHanders.js'
 import { makeSureInterceptorIsNotSleeping } from './sleeping.js'
-import { getSimulationResults, promoteRpcAsPrimary, setLatestUnexpectedError } from './storageVariables.js'
+import { promoteRpcAsPrimary, setLatestUnexpectedError } from './storageVariables.js'
 import { updateChainChangeViewWithPendingRequest } from './windows/changeChain.js'
 import { updateConfirmTransactionView } from './windows/confirmTransaction.js'
 import { askForSignerAccountsFromSignerIfNotAvailable, interceptorAccessMetadataRefresh, requestAccessFromUser, updateInterceptorAccessViewWithPendingRequests } from './windows/interceptorAccess.js'
@@ -32,7 +32,7 @@ async function handleRPCRequest(
 	simulator: Simulator,
 	simulationState: SimulationState | undefined,
 	websiteTabConnections: WebsiteTabConnections,
-	socket: WebsiteSocket,
+	_: WebsiteSocket,
 	website: Website,
 	request: InterceptedRequest,
 	settings: Settings,
@@ -40,13 +40,14 @@ async function handleRPCRequest(
 ): Promise<RPCReply> {
 	console.log('handleRPCRequest received request:', request)
 	const maybeParsedRequest = EthereumJsonRpcRequest.safeParse(request)
-	const forwardToSigner = !settings.simulationMode && !request.usingInterceptorWithoutSigner
+	const forwardToSigner = !request.usingInterceptorWithoutSigner
 	const getForwardingMessage = (request: SendRawTransactionParams | SendTransactionParams | WalletAddEthereumChain | EthGetStorageAtParams) => {
 		if (!forwardToSigner) throw new Error('Should not forward to signer')
 		return { type: 'forwardToSigner' as const, ...request }
 	}
 
 	if (maybeParsedRequest.success === false) {
+		// biome-ignore lint/suspicious/noConsoleLog: <Used for support debugging>
 		console.log({ request })
 		console.warn(maybeParsedRequest.fullError)
 		const maybePartiallyParsedRequest = SupportedEthereumJsonRpcRequestMethods.safeParse(request)
@@ -77,17 +78,14 @@ async function handleRPCRequest(
 		case 'eth_getTransactionReceipt': return await getTransactionReceipt(simulator.ethereum, simulationState, parsedRequest)
 		case 'eth_call': return await call(simulator.ethereum, simulationState, parsedRequest)
 		case 'eth_blockNumber': return await blockNumber(simulator.ethereum, simulationState)
-		case 'eth_subscribe': return await subscribe(socket, parsedRequest)
-		case 'eth_unsubscribe': return await unsubscribe(socket, parsedRequest)
 		case 'eth_chainId': return await chainId(simulator.ethereum)
 		case 'net_version': return await netVersion(simulator.ethereum)
-		case 'eth_getCode': return await getCode(simulator.ethereum, simulationState, parsedRequest)
 		case 'personal_sign':
 		case 'eth_signTypedData':
 		case 'eth_signTypedData_v1':
 		case 'eth_signTypedData_v2':
 		case 'eth_signTypedData_v3':
-		case 'eth_signTypedData_v4': return await personalSign(simulator, activeAddress, simulator.ethereum, parsedRequest, request, website, websiteTabConnections, !forwardToSigner)
+		case 'eth_signTypedData_v4': return await personalSign(simulator, activeAddress, simulator.ethereum, parsedRequest, request, website, websiteTabConnections)
 		case 'eth_accounts': return await getAccounts(activeAddress)
 		case 'eth_requestAccounts': return await getAccounts(activeAddress)
 		case 'eth_gasPrice': return await gasPrice(simulator.ethereum)
@@ -104,7 +102,7 @@ async function handleRPCRequest(
 		case 'eth_sendRawTransaction':
 		case 'eth_sendTransaction': {
 			if (forwardToSigner && settings.activeRpcNetwork.httpsRpc === undefined) return getForwardingMessage(parsedRequest)
-			return await sendTransaction(simulator, activeAddress, parsedRequest, request, website, websiteTabConnections, !forwardToSigner)
+			return await sendTransaction(simulator, activeAddress, parsedRequest, request, website, websiteTabConnections)
 		}
 		case 'web3_clientVersion': return await web3ClientVersion(simulator.ethereum)
 		case 'InterceptorError': return await handleIterceptorError(parsedRequest)
@@ -117,17 +115,10 @@ export async function changeActiveAddressAndChainAndResetSimulation(
 	simulator: Simulator,
 	websiteTabConnections: WebsiteTabConnections,
 	change: {
-		simulationMode: boolean,
 		activeAddress?: bigint,
 		rpcNetwork?: RpcNetwork,
 	},
 ) {
-	if (change.simulationMode) {
-		await changeSimulationMode({ ...change, ...'activeAddress' in change ? { activeSimulationAddress: change.activeAddress } : {} })
-	} else {
-		await changeSimulationMode({ ...change, ...'activeAddress' in change ? { activeSigningAddress: change.activeAddress } : {} })
-	}
-
 	const updatedSettings = await getSettings()
 	sendPopupMessageToOpenWindows({ method: 'popup_settingsUpdated', data: updatedSettings })
 	updateWebsiteApprovalAccesses(simulator, websiteTabConnections, updatedSettings)
@@ -146,9 +137,9 @@ export async function changeActiveAddressAndChainAndResetSimulation(
 	})
 }
 
-export async function changeActiveRpc(simulator: Simulator, websiteTabConnections: WebsiteTabConnections, rpcNetwork: RpcNetwork, simulationMode: boolean) {
+export async function changeActiveRpc(simulator: Simulator, websiteTabConnections: WebsiteTabConnections, rpcNetwork: RpcNetwork) {
 	// allow switching RPC only if we are in simulation mode, or that chain id would not change
-	if (simulationMode || rpcNetwork.chainId === (await getSettings()).activeRpcNetwork.chainId) return await changeActiveAddressAndChainAndResetSimulation(simulator, websiteTabConnections, { simulationMode, rpcNetwork })
+	if (rpcNetwork.chainId === (await getSettings()).activeRpcNetwork.chainId) return await changeActiveAddressAndChainAndResetSimulation(simulator, websiteTabConnections, { rpcNetwork })
 	sendMessageToApprovedWebsitePorts(websiteTabConnections, { method: 'request_signer_to_wallet_switchEthereumChain', result: rpcNetwork.chainId })
 	await sendPopupMessageToOpenWindows({ method: 'popup_settingsUpdated', data: await getSettings() })
 	await promoteRpcAsPrimary(rpcNetwork)
@@ -219,7 +210,7 @@ async function handleContentScriptMessage(simulator: Simulator, websiteTabConnec
 	})
 	try {
 		const settings = await getSettings()
-		const simulationState = settings.simulationMode ? (await getSimulationResults()).simulationState : undefined
+		const simulationState = undefined
 		const resolved = await handleRPCRequest(simulator, simulationState, websiteTabConnections, request.uniqueRequestIdentifier.requestSocket, website, request, settings, activeAddress)
 		return replyToInterceptedRequest(websiteTabConnections, { ...request, ...resolved })
 	} catch (error) {
@@ -262,6 +253,7 @@ export async function popupMessageHandler(
 ) {
 	const maybeParsedRequest = PopupMessage.safeParse(request)
 	if (maybeParsedRequest.success === false) {
+		// biome-ignore lint/suspicious/noConsoleLog: <Used for support debugging>
 		console.log({ request })
 		console.warn(maybeParsedRequest.fullError)
 		return {
@@ -282,7 +274,7 @@ export async function popupMessageHandler(
 			case 'popup_refreshConfirmTransactionMetadata': return refreshPopupConfirmTransactionMetadata(simulator.ethereum, confirmTransactionAbortController)
 			case 'popup_interceptorAccess': return await confirmRequestAccess(simulator, websiteTabConnections, parsedRequest)
 			case 'popup_changeInterceptorAccess': return await changeInterceptorAccess(simulator, websiteTabConnections, parsedRequest)
-			case 'popup_changeActiveRpc': return await popupChangeActiveRpc(simulator, websiteTabConnections, parsedRequest, settings)
+			case 'popup_changeActiveRpc': return await popupChangeActiveRpc(simulator, websiteTabConnections, parsedRequest)
 			case 'popup_changeChainDialog': return await changeChainDialog(simulator, websiteTabConnections, parsedRequest)
 			case 'popup_addOrModifyAddressBookEntry': return await addOrModifyAddressBookEntry(simulator, websiteTabConnections, parsedRequest)
 			case 'popup_getAddressBookData': return await getAddressBookData(parsedRequest)
@@ -297,9 +289,7 @@ export async function popupMessageHandler(
 			case 'popup_interceptorAccessRefresh': return await interceptorAccessChangeAddressOrRefresh(websiteTabConnections, parsedRequest)
 			case 'popup_set_rpc_list': return await setNewRpcList(simulator, parsedRequest, settings)
 			case 'popup_changeAddOrModifyAddressWindowState': return await changeAddOrModifyAddressWindowState(simulator.ethereum, parsedRequest)
-			case 'popup_fetchAbiAndNameFromBlockExplorer': return await popupfetchAbiAndNameFromBlockExplorer(parsedRequest)
 			case 'popup_openWebPage': return await openWebPage(parsedRequest)
-			case 'popup_setDisableInterceptor': return await disableInterceptor(simulator, websiteTabConnections, parsedRequest)
 			case 'popup_clearUnexpectedError': return await setLatestUnexpectedError(undefined)
 			case 'popup_blockOrAllowExternalRequests': return await blockOrAllowExternalRequests(simulator, websiteTabConnections, parsedRequest)
 			case 'popup_allowOrPreventAddressAccessForWebsite': return await allowOrPreventAddressAccessForWebsite(websiteTabConnections, parsedRequest)

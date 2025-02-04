@@ -1,15 +1,14 @@
 import { EthereumClientService } from '../simulation/services/EthereumClientService.js'
-import { createEthereumSubscription, createNewFilter, getEthFilterChanges, getEthFilterLogs, removeEthereumSubscription } from '../simulation/services/EthereumSubscriptionService.js'
-import { getInputFieldFromDataOrInput, getSimulatedBalance, getSimulatedBlock, getSimulatedBlockByHash, getSimulatedBlockNumber, getSimulatedCode, getSimulatedFeeHistory, getSimulatedTransactionByHash, getSimulatedTransactionCount, getSimulatedTransactionReceipt, simulatedCall, simulateEstimateGas } from '../simulation/services/SimulationModeEthereumClientService.js'
+import { getInputFieldFromDataOrInput, getSimulatedBalance, getSimulatedBlock, getSimulatedBlockByHash, getSimulatedBlockNumber, getSimulatedCode, getSimulatedTransactionByHash, getSimulatedTransactionCount, getSimulatedTransactionReceipt, simulatedCall, simulateEstimateGas } from '../simulation/services/SimulationModeEthereumClientService.js'
 import { Simulator } from '../simulation/simulator.js'
 import { SignMessageParams } from '../types/jsonRpc-signing-types.js'
-import { EstimateGasParams, EthBalanceParams, EthBlockByHashParams, EthBlockByNumberParams, EthCallParams, EthNewFilter, EthSubscribeParams, EthUnSubscribeParams, FeeHistory, GetCode, GetFilterChanges, GetFilterLogs, GetTransactionCount, InterceptorError, SendRawTransactionParams, SendTransactionParams, SwitchEthereumChainParams, TransactionByHashParams, TransactionReceiptParams, UninstallFilter } from '../types/JsonRpc-types.js'
+import { EstimateGasParams, EthBalanceParams, EthBlockByHashParams, EthBlockByNumberParams, EthCallParams, GetCode, GetTransactionCount, InterceptorError, SendRawTransactionParams, SendTransactionParams, SwitchEthereumChainParams, TransactionByHashParams, TransactionReceiptParams } from '../types/JsonRpc-types.js'
 import { WebsiteTabConnections } from '../types/user-interface-types.js'
 import { SimulationState } from '../types/visualizer-types.js'
 import { Website } from '../types/websiteAccessTypes.js'
-import { DEFAULT_CALL_ADDRESS, ERROR_INTERCEPTOR_GET_CODE_FAILED, METAMASK_ERROR_BLANKET_ERROR } from '../utils/constants.js'
+import { DEFAULT_CALL_ADDRESS, ERROR_INTERCEPTOR_GET_CODE_FAILED } from '../utils/constants.js'
 import { handleUnexpectedError } from '../utils/errors.js'
-import { InterceptedRequest, WebsiteSocket } from '../utils/requests.js'
+import { InterceptedRequest } from '../utils/requests.js'
 import { openChangeChainDialog } from './windows/changeChain.js'
 import { openConfirmTransactionDialogForMessage, openConfirmTransactionDialogForTransaction } from './windows/confirmTransaction.js'
 
@@ -37,10 +36,9 @@ export async function sendTransaction(
 	transactionParams: SendTransactionParams | SendRawTransactionParams,
 	request: InterceptedRequest,
 	website: Website,
-	websiteTabConnections: WebsiteTabConnections,
-	simulationMode = true,
+	websiteTabConnections: WebsiteTabConnections
 ) {
-	const action = await openConfirmTransactionDialogForTransaction(simulator, request, transactionParams, simulationMode, activeAddress, website, websiteTabConnections)
+	const action = await openConfirmTransactionDialogForTransaction(simulator, request, transactionParams, activeAddress, website, websiteTabConnections)
 	if (action.type === 'doNotReply') return action
 	return { method: transactionParams.method, ...action }
 }
@@ -84,14 +82,6 @@ export async function estimateGas(ethereumClientService: EthereumClientService, 
 	return { type: 'result' as const, method: request.method, result: estimatedGas.gas }
 }
 
-export async function subscribe(socket: WebsiteSocket, request: EthSubscribeParams) {
-	return { type: 'result' as const, method: request.method, result: await createEthereumSubscription(request, socket) }
-}
-
-export async function unsubscribe(socket: WebsiteSocket, request: EthUnSubscribeParams) {
-	return { type: 'result' as const, method: request.method, result: await removeEthereumSubscription(socket, request.params[0]) }
-}
-
 export async function getAccounts(activeAddress: bigint | undefined) {
 	if (activeAddress === undefined) return { type: 'result' as const, method: 'eth_accounts' as const, result: [] }
 	return { type: 'result' as const, method: 'eth_accounts' as const, result: [activeAddress] }
@@ -116,20 +106,19 @@ export async function personalSign(
 	transactionParams: SignMessageParams,
 	request: InterceptedRequest,
 	website: Website,
-	websiteTabConnections: WebsiteTabConnections,
-	simulationMode = true,
+	websiteTabConnections: WebsiteTabConnections
 ) {
-	const action = await openConfirmTransactionDialogForMessage(simulator, ethereumClientService, request, transactionParams, simulationMode, activeAddress, website, websiteTabConnections)
+	const action = await openConfirmTransactionDialogForMessage(simulator, ethereumClientService, request, transactionParams, activeAddress, website, websiteTabConnections)
 	if (action.type === 'doNotReply') return action
 	return { method: transactionParams.method, ...action }
 }
 
-export async function switchEthereumChain(simulator: Simulator, websiteTabConnections: WebsiteTabConnections, ethereumClientService: EthereumClientService, params: SwitchEthereumChainParams, request: InterceptedRequest, simulationMode: boolean, website: Website) {
+export async function switchEthereumChain(simulator: Simulator, websiteTabConnections: WebsiteTabConnections, ethereumClientService: EthereumClientService, params: SwitchEthereumChainParams, request: InterceptedRequest, website: Website) {
 	if (ethereumClientService.getChainId() === params.params[0].chainId) {
 		// we are already on the right chain
 		return { type: 'result' as const, method: params.method, result: null }
 	}
-	const change = await openChangeChainDialog(simulator, websiteTabConnections, request, simulationMode, website, params)
+	const change = await openChangeChainDialog(simulator, websiteTabConnections, request, website, params)
 	return { type: 'result' as const, method: params.method, ...change }
 }
 
@@ -145,31 +134,6 @@ export async function getTransactionCount(ethereumClientService: EthereumClientS
 
 export async function web3ClientVersion(ethereumClientService: EthereumClientService) {
 	return { type: 'result' as const, method: 'web3_clientVersion' as const, result: await ethereumClientService.web3ClientVersion(undefined) }
-}
-
-export async function feeHistory(ethereumClientService: EthereumClientService, request: FeeHistory) {
-	return { type: 'result' as const, method: 'eth_feeHistory' as const, result: await getSimulatedFeeHistory(ethereumClientService, undefined, request) }
-}
-
-export async function installNewFilter(socket: WebsiteSocket, request: EthNewFilter, ethereumClientService: EthereumClientService, simulationState: SimulationState | undefined) {
-	return { type: 'result' as const, method: request.method, result: await createNewFilter(request, socket, ethereumClientService, undefined, simulationState) }
-}
-
-export async function uninstallNewFilter(socket: WebsiteSocket, request: UninstallFilter) {
-	return { type: 'result' as const, method: request.method, result: await removeEthereumSubscription(socket, request.params[0]) }
-}
-
-export async function getFilterChanges(request: GetFilterChanges, ethereumClientService: EthereumClientService, simulationState: SimulationState | undefined) {
-	const result = await getEthFilterChanges(request.params[0], ethereumClientService, undefined, simulationState)
-	if (result === undefined) return { type: 'result' as const, method: request.method, error: { code: METAMASK_ERROR_BLANKET_ERROR, message: 'No filter found for identifier' } }
-
-	return { type: 'result' as const, method: request.method, result }
-}
-
-export async function getFilterLogs(request: GetFilterLogs, ethereumClientService: EthereumClientService, simulationState: SimulationState | undefined) {
-	const result = await getEthFilterLogs(request.params[0], ethereumClientService, undefined, simulationState)
-	if (result === undefined) return { type: 'result' as const, method: request.method, error: { code: METAMASK_ERROR_BLANKET_ERROR, message: 'No filter found for identifier' } }
-	return { type: 'result' as const, method: request.method, result }
 }
 
 export async function handleIterceptorError(request: InterceptorError) {

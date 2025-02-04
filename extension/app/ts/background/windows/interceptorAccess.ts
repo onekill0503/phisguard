@@ -104,8 +104,7 @@ export async function requestAccessFromUser(
 ) {
 	// check if we need to ask address access or not. If address is put to never need to have address specific permision, we don't need to ask for it
 	const activeAddressEntry = activeAddress !== undefined ? await getActiveAddressEntry(activeAddress) : activeAddress
-	const askForAddressAccess = requestAccessToAddress !== undefined && requestAccessToAddress.askForAddressAccess !== false
-	const accessAddress = askForAddressAccess ? requestAccessToAddress : undefined
+	const accessAddress = undefined
 	const closeWindowOrTabCallback = (popupOrTabId: PopupOrTabId) => onCloseWindowOrTab(simulator, popupOrTabId, websiteTabConnections)
 	const onCloseWindowCallback = async (id: number) => closeWindowOrTabCallback({ type: 'popup' as const, id })
 	const onCloseTabCallback = async (id: number) => closeWindowOrTabCallback({ type: 'tab' as const, id })
@@ -154,7 +153,7 @@ export async function requestAccessFromUser(
 			if (request !== undefined) refuseAccess(websiteTabConnections, request)
 			throw new Error('Opened dialog does not exist when expected in requestAccessFromUser function')
 		}
-		const accessRequestId =  `${ accessAddress?.address } || ${ website.websiteOrigin }`
+		const accessRequestId =  `${ activeAddress } || ${ website.websiteOrigin }`
 		const pendingRequest = {
 			popupOrTabId: openedDialog.popupOrTab,
 			socket,
@@ -166,7 +165,6 @@ export async function requestAccessFromUser(
 			associatedAddresses: requestAccessToAddress !== undefined ? await getAssociatedAddresses(settings, website.websiteOrigin, requestAccessToAddress) : [],
 			signerAccounts: [],
 			signerName: request !== undefined ? (await getTabState(request.uniqueRequestIdentifier.requestSocket.tabId)).signerName : 'NoSignerDetected',
-			simulationMode: settings.simulationMode,
 			activeAddress: activeAddress,
 		}
 
@@ -225,9 +223,7 @@ async function resolve(simulator: Simulator, websiteTabConnections: WebsiteTabCo
 		} else {
 			if (accessReply.requestAccessToAddress === undefined) throw new Error('Changed request to page level')
 			await changeAccess(simulator, websiteTabConnections, accessReply, website, false)
-			const settings = await getSettings()
 			await changeActiveAddressAndChainAndResetSimulation(simulator, websiteTabConnections, {
-				simulationMode: settings.simulationMode,
 				activeAddress: accessReply.requestAccessToAddress,
 			})
 		}
