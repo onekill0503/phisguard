@@ -7,11 +7,11 @@ interface IHelloWorldServiceManager {
     event TaskResponded(uint32 indexed taskIndex, Task task, address operator);
     event Transaction(uint256 indexed taskIndex, address indexed from, address indexed to, uint256 value, bytes data, bytes message, bool status);
     struct Task {
-        string name;
         uint32 taskCreatedBlock;
         address from;
         address to;
         bytes data;
+        uint256 value;
     }
 
     function latestTaskNum() external view returns (uint32);
@@ -26,12 +26,17 @@ interface IHelloWorldServiceManager {
     ) external view returns (bytes memory);
 
     function createNewTask(
-        string memory name
+        address from,
+        address to,
+        bytes memory data,
+        uint256 value
     ) external returns (Task memory);
 
     function respondToTask(
         Task calldata task,
         uint32 referenceTaskIndex,
-        bytes calldata signature
+        bytes memory signature,
+        bool isSafe,
+        bytes memory causeHash
     ) external;
 }

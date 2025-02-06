@@ -39,13 +39,19 @@ const helloWorldServiceManager = new ethers.Contract(helloWorldServiceManagerAdd
 const ecdsaRegistryContract = new ethers.Contract(ecdsaStakeRegistryAddress, ecdsaRegistryABI, wallet);
 const avsDirectory = new ethers.Contract(avsDirectoryAddress, avsDirectoryABI, wallet);
 
+interface Task {
+    createdBlock: number,
+    from: string,
+    to: string,
+    data: string,
+    value: string
+}
 
-const signAndRespondToTask = async (taskIndex: number, taskCreatedBlock: number, taskName: string) => {
-    const message = `Hello, ${taskName}`;
-    const messageHash = ethers.solidityPackedKeccak256(["string"], [message]);
+const signAndRespondToTask = async (taskIndex: number, task: Task) => {
+    const messageHash = ethers.solidityPackedKeccak256(["address","address","bytes","uint256"], [task.from, task.to, task.data, task.value]);
     const messageBytes = ethers.getBytes(messageHash);
     const signature = await wallet.signMessage(messageBytes);
-
+    console.log(task);
     console.log(`Signing and responding to task ${taskIndex}`);
 
     const operators = [await wallet.getAddress()];
@@ -56,9 +62,11 @@ const signAndRespondToTask = async (taskIndex: number, taskCreatedBlock: number,
     );
 
     const tx = await helloWorldServiceManager.respondToTask(
-        { name: taskName, taskCreatedBlock: taskCreatedBlock },
+        [task.createdBlock, task.from, task.to, task.data, task.value],
         taskIndex,
-        signedTask
+        signedTask,
+        false,
+        '0x'
     );
     await tx.wait();
     console.log(`Responded to task.`);
@@ -124,15 +132,22 @@ const monitorNewTasks = async () => {
     //await helloWorldServiceManager.createNewTask("EigenWorld");
 
     helloWorldServiceManager.on("NewTaskCreated", async (taskIndex: number, task: any) => {
-        console.log(`New task detected: Hello, ${task.name}`);
-        await signAndRespondToTask(taskIndex, task.taskCreatedBlock, task.name);
+        console.log(task)
+        console.log(`New task detected: From ${task.from}`);
+        await signAndRespondToTask(taskIndex, {
+            createdBlock: task[0],
+            from: task[1],
+            to: task[2],
+            data: task[3],
+            value: task[4]
+        });
     });
 
     console.log("Monitoring for new tasks...");
 };
 
 const main = async () => {
-    await registerOperator();
+    // await registerOperator();
     monitorNewTasks().catch((error) => {
         console.error("Error monitoring tasks:", error);
     });

@@ -247,12 +247,14 @@ contract HelloWorldTaskManagerSetup is Test {
         return signatures;
     }
 
-    function createTask(TrafficGenerator memory generator, string memory taskName) internal {
+    function createTask(TrafficGenerator memory generator, IHelloWorldServiceManager.Task memory taskName) internal {
         IHelloWorldServiceManager helloWorldServiceManager =
             IHelloWorldServiceManager(helloWorldDeployment.helloWorldServiceManager);
 
         vm.prank(generator.key.addr);
-        helloWorldServiceManager.createNewTask(taskName);
+        helloWorldServiceManager.createNewTask(
+            taskName.from, taskName.to, taskName.data, taskName.value
+        );
     }
 
     function respondToTask(
@@ -261,7 +263,7 @@ contract HelloWorldTaskManagerSetup is Test {
         uint32 referenceTaskIndex
     ) internal {
         // Create the message hash
-        bytes32 messageHash = keccak256(abi.encodePacked("Hello, ", task.name));
+        bytes32 messageHash = keccak256(abi.encodePacked(task.from, task.to, task.data, task.value));
 
         bytes memory signature = signWithSigningKey(operator, messageHash);
 
@@ -273,7 +275,7 @@ contract HelloWorldTaskManagerSetup is Test {
         bytes memory signedTask = abi.encode(operators, signatures, uint32(block.number));
 
         IHelloWorldServiceManager(helloWorldDeployment.helloWorldServiceManager).respondToTask(
-            task, referenceTaskIndex, signedTask
+            task, referenceTaskIndex, signedTask, false, ""
         );
     }
 }
@@ -376,12 +378,16 @@ contract CreateTask is HelloWorldTaskManagerSetup {
     }
 
     function testCreateTask() public {
-        string memory taskName = "Test Task";
+        IHelloWorldServiceManager.Task memory newTask;
+        newTask.from = generator.key.addr;
+        newTask.to = owner.key.addr;
+        newTask.data = "";
+        newTask.value = 0;
 
         vm.prank(generator.key.addr);
-        IHelloWorldServiceManager.Task memory newTask = sm.createNewTask(taskName);
+        IHelloWorldServiceManager.Task memory newTask = sm.createNewTask(newTask.from, newTask.to, newTask.data, newTask.value);
 
-        require(sha256(abi.encodePacked(newTask.name)) == sha256(abi.encodePacked(taskName)), "Task name not set correctly");
+        require(sha256(abi.encodePacked(newTask.from, newTask.to, newTask.data, newTask.value)) == sha256(abi.encodePacked(newTask.from, newTask.to, newTask.data, newTask.value)), "Task name not set correctly");
         require(newTask.taskCreatedBlock == uint32(block.number), "Task created block not set correctly");
     }
 }
@@ -424,11 +430,17 @@ contract RespondToTask is HelloWorldTaskManagerSetup {
     }
 
     function testRespondToTask() public {
-        string memory taskName = "TestTask";
-        IHelloWorldServiceManager.Task memory newTask = sm.createNewTask(taskName);
+        IHelloWorldServiceManager.Task memory newTask;
+        newTask.from = generator.key.addr;
+        newTask.to = owner.key.addr;
+        newTask.data = "";
+        newTask.value = 0;
+        IHelloWorldServiceManager.Task memory newTask = sm.createNewTask(
+            newTask.from, newTask.to, newTask.data, newTask.value
+        );
         uint32 taskIndex = sm.latestTaskNum() - 1;
 
-        bytes32 messageHash = keccak256(abi.encodePacked("Hello, ", taskName));
+        bytes32 messageHash = keccak256(abi.encodePacked(newTask.from, newTask.to, newTask.data, newTask.value));
         bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
         bytes memory signature = signWithSigningKey(operators[0], ethSignedMessageHash); // TODO: Use signing key after changes to service manager
 
@@ -440,6 +452,6 @@ contract RespondToTask is HelloWorldTaskManagerSetup {
         bytes memory signedTask = abi.encode(operatorsMem, signatures, uint32(block.number));
 
         vm.roll(block.number+1);
-        sm.respondToTask(newTask, taskIndex, signedTask);
+        sm.respondToTask(newTask, taskIndex, signedTask, false, "");
     }
 }

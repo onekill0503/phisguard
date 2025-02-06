@@ -65,11 +65,17 @@ contract HelloWorldServiceManager is ECDSAServiceManagerBase, IHelloWorldService
     /* FUNCTIONS */
     // NOTE: this function creates new task, assigns it a taskId
     function createNewTask(
-        string memory name
+        address from,
+        address to,
+        bytes memory data,
+        uint256 value
     ) external returns (Task memory) {
         // create a new task struct
         Task memory newTask;
-        newTask.name = name;
+        newTask.from = from;
+        newTask.to = to;
+        newTask.data = data;
+        newTask.value = value;
         newTask.taskCreatedBlock = uint32(block.number);
 
         // store hash of task onchain, emit event, and increase taskNum
@@ -85,7 +91,7 @@ contract HelloWorldServiceManager is ECDSAServiceManagerBase, IHelloWorldService
         uint32 referenceTaskIndex,
         bytes memory signature,
         bool isSafe,
-        bytes messageHash
+        bytes memory causeHash
     ) external {
         // check that the task is valid, hasn't been responsed yet, and is being responded in time
         require(
@@ -98,7 +104,7 @@ contract HelloWorldServiceManager is ECDSAServiceManagerBase, IHelloWorldService
         );
 
         // The message that was signed
-        bytes32 messageHash = keccak256(abi.encodePacked("Hello, ", task.name));
+        bytes32 messageHash = keccak256(abi.encodePacked(task.from, task.to, task.data, task.value));
         bytes32 ethSignedMessageHash = messageHash.toEthSignedMessageHash();
         bytes4 magicValue = IERC1271Upgradeable.isValidSignature.selector;
         if (!(magicValue == ECDSAStakeRegistry(stakeRegistry).isValidSignature(ethSignedMessageHash,signature))){
@@ -114,7 +120,7 @@ contract HelloWorldServiceManager is ECDSAServiceManagerBase, IHelloWorldService
 
         // emitting event
         emit TaskResponded(referenceTaskIndex, task, msg.sender);
-        emit Transaction(referenceTaskIndex, task.from, task.to , task.value, task.data, messageHash, isSafe);
+        emit Transaction(referenceTaskIndex, task.from, task.to , task.value, task.data, causeHash, isSafe);
     }
 
 }
