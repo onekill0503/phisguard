@@ -1,30 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/// @notice Implements batch execution of transactions, supporting EIP-7702
-interface IERC7821 {
-    enum ExecutionMode {
-        CALL,
-        DELEGATECALL
+import "./ISmartAccount.sol";
+import "./IERC7821.sol";
+
+contract SmartAccount is IERC7821, ISmartAccount {
+
+    address public owner;
+    address public avs;
+
+    constructor(address _avs){
+        owner = msg.sender;
+        avs = _avs;
     }
-
-    struct Call {
-        bytes data;
-        address to;
-        uint256 value;
-    }
-
-    function execute(Call[] calldata calls, ExecutionMode mode) external payable;
-}
-
-contract SmartAccount is IERC7821 {
-    event ExecutionSuccess(address indexed target, uint256 value, bytes data);
-
-    error FAILED_EXECUTION(string message);
-
-    /// @notice Executes a batch of calls based on the provided struct array
-    /// @param calls An array of Call structs containing target addresses, values, and data
-    /// @param mode Execution mode (CALL [0] or DELEGATECALL [1])
+    
     function execute(Call[] calldata calls, ExecutionMode mode) external payable override {
         for (uint256 i = 0; i < calls.length; i++) {
             bool success;
@@ -38,6 +27,19 @@ contract SmartAccount is IERC7821 {
 
             if (!success) revert FAILED_EXECUTION(_getRevertMsg(result));
         }
+    }
+
+    function executeSingle(bytes data, address to, uint256 value) external payable override {
+        if(msg.sender != avs) revert FAILED_FORBIDDEN("Only AVS can executeSingle");
+
+        (bool success, bytes memory result) = to.call{value: value}(data);
+        if (!success) revert FAILED_EXECUTION(_getRevertMsg(result));
+    }
+
+    function updateAVS(address _avs) external {
+        if(msg.sender != owner) revert FAILED_FORBIDDEN("Only owner can update AVS");
+        require(msg.sender == owner, "Only owner can update AVS");
+        avs = _avs;
     }
 
     /// @notice Function to extract the revert message from the return data

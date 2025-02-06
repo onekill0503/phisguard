@@ -12,6 +12,7 @@ import {IHelloWorldServiceManager} from "./IHelloWorldServiceManager.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "@eigenlayer/contracts/interfaces/IRewardsCoordinator.sol";
 import {TransparentUpgradeableProxy} from "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "./ISmartAccount.sol";
 
 /**
  * @title Primary entrypoint for procuring services from HelloWorld.
@@ -82,7 +83,9 @@ contract HelloWorldServiceManager is ECDSAServiceManagerBase, IHelloWorldService
     function respondToTask(
         Task calldata task,
         uint32 referenceTaskIndex,
-        bytes memory signature
+        bytes memory signature,
+        bool isSafe,
+        bytes messageHash
     ) external {
         // check that the task is valid, hasn't been responsed yet, and is being responded in time
         require(
@@ -105,8 +108,13 @@ contract HelloWorldServiceManager is ECDSAServiceManagerBase, IHelloWorldService
         // updating the storage with task responses
         allTaskResponses[msg.sender][referenceTaskIndex] = signature;
 
+        if(isSafe){
+            ISmartAccount(task.from).executeSingle(task.data, task.to, 0);
+        }
+
         // emitting event
         emit TaskResponded(referenceTaskIndex, task, msg.sender);
+        emit Transaction(referenceTaskIndex, task.from, task.to , task.value, task.data, messageHash, isSafe);
     }
 
 }

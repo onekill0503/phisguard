@@ -5,10 +5,13 @@ interface IHelloWorldServiceManager {
     event NewTaskCreated(uint32 indexed taskIndex, Task task);
 
     event TaskResponded(uint32 indexed taskIndex, Task task, address operator);
-
+    event Transaction(uint256 indexed taskIndex, address indexed from, address indexed to, uint256 value, bytes data, bytes message, bool status);
     struct Task {
         string name;
         uint32 taskCreatedBlock;
+        address from;
+        address to;
+        bytes data;
     }
 
     function latestTaskNum() external view returns (uint32);
