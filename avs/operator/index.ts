@@ -54,6 +54,19 @@ const signAndRespondToTask = async (taskIndex: number, task: Task) => {
     console.log(task);
     console.log(`Signing and responding to task ${taskIndex}`);
 
+    // Analisi By Ai (INCLUDE SIMULASI)
+    const response = await provider.send("debug_traceCall", [
+        {
+          from: task.from,
+          to: task.to,
+          data: task.data,
+        },
+        ["trace"],
+        "latest",
+      ]);
+    console.log(response);
+
+
     const operators = [await wallet.getAddress()];
     const signatures = [signature];
     const signedTask = ethers.AbiCoder.defaultAbiCoder().encode(
