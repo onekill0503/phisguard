@@ -17,6 +17,7 @@ import { SignerLogoText } from '../subcomponents/signers.js'
 import { tryFocusingTabOrWindow } from '../ui-utils.js'
 import { AddNewAddress } from './AddNewAddress.js'
 import { InvalidMessage, isPossibleToSignMessage } from './PersonalSign.js'
+import { WebsiteOriginText } from '../subcomponents/address.js'
 
 const getResultsForTransaction = (results: readonly SimulatedAndVisualizedTransaction[], transactionIdentifier: bigint) => {
 	return results.find((result) => result.transactionIdentifier === transactionIdentifier)
@@ -35,9 +36,80 @@ type TransactionCardParams = {
 function TransactionCard(param: TransactionCardParams) {
 	return <>
 		<div class='card' style={`top: ${param.numberOfUnderTransactions * -HALF_HEADER_HEIGHT}px`}>
+			{/* <header class='card-header'>
+				<p class='card-header-icon unsetcursor' style={'margin-left: auto; margin-right: 0; overflow: hidden;'}>
+					<WebsiteOriginText {...param.currentPendingTransaction.transactionToSimulate.website} />
+				</p>
+			</header>
+
 			<div class='card-content' style='padding-bottom: 5px;'>
 				<div class='textbox'>
-					<p class='paragraph' style='color: var(--subtitle-text-color)'>{stringifyJSONWithBigInts(param.pendingTransactionsAndSignableMessages[0]?.originalRequestParameters)}</p>
+					<p class='paragraph' style='color: var(--subtitle-text-color)'>{stringifyJSONWithBigInts(serialize(OriginalSendRequestParameters, param.currentPendingTransaction.originalRequestParameters), 4)}</p>
+				</div>
+			</div> */}
+
+			<header class='card-header' style={'display: flex; flex-direction: row; justify: between; align-items: center'}>
+				<strong style={'margin-left: 15px; font-size: x-large;'}>PhisGuard</strong>
+				<p class='card-header-icon unsetcursor' style={'margin-left: auto; margin-right: 0; overflow: hidden;'}>
+					<WebsiteOriginText {...param.currentPendingTransaction.transactionToSimulate.website} />
+				</p>
+			</header>
+			<div class='card-content' style={'padding-bottom: 5px'}>
+				<div class='text-box'>
+					<div class='alert' style={'display: flex; flex-direction: row; align-items: center; padding-left: 8px; padding-top: 6px; padding-bottom: 6px; gap: 8px; background-color: #34e234b5; color: #0c7815; border-radius: 6px;'}>
+						<img src="../img/accept.png" alt="accept" style={'width: 28px;'} />
+						<p>Your Transaction is Safe</p>
+					</div>
+					{/* <div class='alert' style={'display: flex; flex-direction: row; align-items: center; padding-left: 8px; padding-top: 6px; padding-bottom: 6px; gap: 8px; background-color: #ed3a3a80; color: #e21b1b; border-radius: 6px;'}>
+						<img src="../img/failed.png" alt="failed" style={'width: 28px;'} />
+						<p>Your Transaction is Not Safe</p>
+					</div> */}
+					{/* <div style={'display: flex; flex-direction: column; gap: 8px; margin-top: 18px;'}>
+						<strong>Message</strong>
+						<div style={'display: flex; flex-direction: column; gap: 4px; font-size: 12px; padding: 5px; border: solid 2px #eee; border-radius: 6px;'}>
+							<span>No suspicious patterns detected. The contract is verified and safe.</span>
+						</div>
+					</div> */}
+					<div style={'display: flex; flex-direction: column; gap: 8px; margin-top: 18px;'}>
+						<strong>Transaction Details</strong>
+						<div style={'display: flex; flex-direction: column; gap: 4px; font-size: 12px; padding: 5px; border: solid 2px #eee; border-radius: 6px;'}>
+							<div style={'display: flex; flex-direction: row; gap: 8px;'}>
+								<div style={'display: flex; flex-direction: row; justify-content: space-between; width: 70px;'}>
+									<span>Sender</span>
+									<span>:</span>
+								</div>
+								<span>0x1234567890abcdef1234567890abcdef12345678</span>
+							</div>
+							<div style={'display: flex; flex-direction: row; gap: 8px;'}>
+								<div style={'display: flex; flex-direction: row; justify-content: space-between; width: 70px;'}>
+									<span>Recipient</span>
+									<span>:</span>
+								</div>
+								<span>0xabcdef1234567890abcdef1234567890abcdef12</span>
+							</div>
+							<div style={'display: flex; flex-direction: row; gap: 8px;'}>
+								<div style={'display: flex; flex-direction: row; justify-content: space-between; width: 70px;'}>
+									<span>Value</span>
+									<span>:</span>
+								</div>
+								<span>1.5 ETH</span>
+							</div>
+							<div style={'display: flex; flex-direction: row; gap: 8px;'}>
+								<div style={'display: flex; flex-direction: row; justify-content: space-between; width: 70px;'}>
+									<span>Gas Limit</span>
+									<span>:</span>
+								</div>
+								<span>21000</span>
+							</div>
+							<div style={'display: flex; flex-direction: row; gap: 8px;'}>
+								<div style={'display: flex; flex-direction: row; justify-content: space-between; width: 70px;'}>
+									<span>Calldata</span>
+									<span>:</span>
+								</div>
+								<span style={'width: 400px; word-wrap: break-word;'}>0xa9059cbb000000000000000000000000abcdef1234567890abcdef1234567890abcdef1200000000000000000000000000000000000000000000000000000000000001</span>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
