@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "register:operator": "ts-node operator/register.ts",
     "start:operator": "ts-node operator/index.ts",
     "start:traffic": "ts-node operator/createNewTasks.ts",
     "start:anvil": "anvil",
@@ -19,6 +20,7 @@
     "test": "NODE_OPTIONS=\"$NODE_OPTIONS --experimental-vm-modules\" npx jest"
   },
   "dependencies": {
+    "axios": "^1.7.9",
     "dotenv": "^10.0.0",
     "ethers": "^6.13.2"
   },
