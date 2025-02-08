@@ -14,5 +14,5 @@ interface IERC7821 {
         uint256 value;
     }
 
-    function execute(Call[] calldata calls, ExecutionMode mode) external payable;
+    function execute(Call calldata calls) external payable;
 }

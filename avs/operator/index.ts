@@ -1,4 +1,4 @@
-import { ethers, encodeBytes32String } from "ethers";
+import { ethers } from "ethers";
 import * as dotenv from "dotenv";
 import axios from "axios";
 const fs = require('fs');
@@ -16,7 +16,8 @@ if (!Object.keys(process.env).length) {
 const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
 const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
 /// TODO: Hack
-let chainId = 31337;
+// let chainId = 31337;
+let chainId = 911867;
 
 const avsDeploymentData = JSON.parse(fs.readFileSync(path.resolve(__dirname, `../contracts/deployments/hello-world/${chainId}.json`), 'utf8'));
 
@@ -39,22 +40,17 @@ const signAndRespondToTask = async (taskIndex: number, task: Task) => {
     const messageHash = ethers.solidityPackedKeccak256(["address","address","bytes","uint256"], [task.from, task.to, task.data, task.value]);
     const messageBytes = ethers.getBytes(messageHash);
     const signature = await wallet.signMessage(messageBytes);
-    console.log(task);
     console.log(`Signing and responding to task ${taskIndex}`);
-
-    // Analisi By Ai (INCLUDE SIMULASI)
+    
     const debugData = await provider.send("debug_traceCall", [
         {
           from: task.from,
           to: task.to,
           data: task.data,
         },
-        ["trace"],
-        "latest",
+        "latest"
       ]);
-    console.log(debugData);
-    const { isSafe, cause } = await getAiAnalysis(debugData);
-
+    const { isSafe, cause } = await getAiAnalysis(JSON.stringify(debugData), task);
 
     const operators = [await wallet.getAddress()];
     const signatures = [signature];
@@ -62,23 +58,22 @@ const signAndRespondToTask = async (taskIndex: number, task: Task) => {
         ["address[]", "bytes[]", "uint32"],
         [operators, signatures, ethers.toBigInt(await provider.getBlockNumber()-1)]
     );
-
+    const causeBytes = ethers.AbiCoder.defaultAbiCoder().encode(["string"] , [cause]);
     const tx = await helloWorldServiceManager.respondToTask(
         [task.createdBlock, task.from, task.to, task.data, task.value],
         taskIndex,
         signedTask,
         isSafe,
-        encodeBytes32String(cause)
+        causeBytes
     );
     await tx.wait();
-    console.log(`Responded to task.`);
+    console.log(`Responded to task with hash : ${ tx.hash }.`);
 };
 
 
 const monitorNewTasks = async () => {
 
     helloWorldServiceManager.on("NewTaskCreated", async (taskIndex: number, task: any) => {
-        console.log(task)
         console.log(`New task detected: From ${task.from}`);
         await signAndRespondToTask(taskIndex, {
             createdBlock: task[0],
@@ -92,11 +87,11 @@ const monitorNewTasks = async () => {
     console.log("Monitoring for new tasks...");
 };
 
-const getAiAnalysis = async (data: string ) => {
+const getAiAnalysis = async (data: string, task: Task ) => {
     let isSafe : boolean = false;
     let analysis : string = "Analysis not available";
     try {
-        const message = `Hey, Can you analyze this result of debug_traceCall for me? ${data}, is this possibly phishing or not safe ?. response with json format { safe: boolean, cause: string }.`;
+        const message = `Hey, Can you analyze this result of debug_traceCall for me? ${data}, is this possibly phishing or not safe ?, this transaction from ${task.from} to ${task.to} with value ${task.value}. response with json only with format { safe: boolean, cause: string }. no additional text and limit cause only max 280 characters`;
         const response = await axios.post(`https://autonome.alt.technology/${agentId}/chat`, {
             message: message,
         } , {

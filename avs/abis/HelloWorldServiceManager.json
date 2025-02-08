@@ -687,9 +687,9 @@
     "inputs": [
       {
         "name": "taskIndex",
-        "type": "uint256",
+        "type": "uint32",
         "indexed": true,
-        "internalType": "uint256"
+        "internalType": "uint32"
       },
       {
         "name": "from",
