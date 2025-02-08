@@ -65,7 +65,7 @@ export const TransactionDetail: React.FC = () => {
                   <XCircle className="w-8 h-8 text-red-500" />
                   <div>
                     <h1 className="text-2xl font-bold text-red-700">Transaction Failed</h1>
-                    {/* <p className="text-red-600 mt-1">{transaction.reason}</p> */}
+                    <p className="text-red-600 mt-1">Transaction cannot be executed</p>
                   </div>
                 </>
               )}
