@@ -16,7 +16,7 @@ export default createConfig({
     ServiceManager: {
       network: "odyssey",
       abi: ServiceManagerAbi,
-      address: "0xAbAF047F0CfeFf09e21739A1BCc1ae58147f8B11",
+      address: "0x4bB6e6967300618124b276AE79125798753D0847",
       startBlock: 10420000
     }
   },

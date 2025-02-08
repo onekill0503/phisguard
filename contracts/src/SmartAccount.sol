@@ -11,12 +11,12 @@ contract SmartAccount is IERC7821, ISmartAccount {
     function execute(Call calldata calls) external payable override {
         // We put service manager address here cause when we use eip7702 there is different storage between smartcontract and eoa wallet.abi
         // so when we put service manager address above , it cause an error
-        IHelloWorldServiceManager serviceManager = IHelloWorldServiceManager(0xAbAF047F0CfeFf09e21739A1BCc1ae58147f8B11);
+        IHelloWorldServiceManager serviceManager = IHelloWorldServiceManager(0x4bB6e6967300618124b276AE79125798753D0847);
         serviceManager.createNewTask(msg.sender, calls.to, calls.data, calls.value);
     }
 
     function executeSingle(bytes memory data, address to, uint256 value) external payable override {
-        if (msg.sender != address(0xAbAF047F0CfeFf09e21739A1BCc1ae58147f8B11)) {
+        if (msg.sender != address(0x4bB6e6967300618124b276AE79125798753D0847)) {
             revert FAILED_FORBIDDEN("Only AVS can executeSingle");
         }
 

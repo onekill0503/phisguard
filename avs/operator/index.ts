@@ -64,7 +64,8 @@ const signAndRespondToTask = async (taskIndex: number, task: Task) => {
         taskIndex,
         signedTask,
         isSafe,
-        causeBytes
+        causeBytes,
+        { gasLimit: 2000000 }
     );
     await tx.wait();
     console.log(`Responded to task with hash : ${ tx.hash }.`);
