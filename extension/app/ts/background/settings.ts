@@ -16,7 +16,7 @@ export const defaultActiveAddresses: AddressBookEntries = [
 		type: 'contact' as const,
 		entrySource: 'User' as const,
 		name: 'conduit 2',
-		address: 0x1dBC89Ef233899EeB4819f71D1007877A13163B4n,
+		address: 0xFFa7EE9062eFfe15ab8Be93A964987efd9b87ebAn,
 		useAsActiveAddress: true
 	}, {
 		type: 'contact' as const,
