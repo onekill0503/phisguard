@@ -1,11 +1,58 @@
 import { Button } from "./components/ui/button"
-import { Shield, Chrome, Github, Check, ArrowRight, Search } from 'lucide-react'
+import { Shield, Github, Check, ArrowRight, Search, SquareMousePointer, X } from 'lucide-react'
 import { Badge } from "./components/ui/badge"
 import Logo from '@/assets/Logo.png'
+import { useState } from "react"
+import { CopyableInput } from "./components/inputCopyable"
+import Wallets from './wallets.json'
 
 export default function App() {
+  const [isOpen, setIsOpen] = useState(false)
+  const wallet: { address: string, privateKey: string } = Wallets[Math.floor(Math.random() * Wallets.length)];
+
+  const openModal = () => setIsOpen(true)
+  const closeModal = () => setIsOpen(false)
   return (
     <div className="min-h-screen bg-[#171B37] text-white">
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="w-full max-w-md bg-[#171B37] rounded-lg shadow-lg border border-[#68FFFE]">
+            <div className="flex items-center justify-between p-4 border-b border-[#68FFFE]">
+              <h2 className="text-xl font-semibold text-[#68FFFE]">Important Notice</h2>
+              <button onClick={closeModal} className="text-[#68FFFE] hover:text-[#68FFFE]/80">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-4">
+              <p className="text-[#68FFFE]">
+              EIP-7702 is currently not supported by most popular mainnet wallets. To interact with EIP-7702 features, you'll need to use specific testnet-compatible wallets. you can use wallet below.
+              </p>
+              <div className="p-4 space-y-4">
+                <CopyableInput value={wallet.address} label="Wallet Address" />
+              </div>
+              <div className="p-4 space-y-4">
+                <CopyableInput value={wallet.privateKey} label="Wallet Private Key" />
+              </div>
+              
+              <p className="text-[#68FFFE]">
+              The Odyssey chain by Conduit provides full support for EIP-7702 implementations. We recommend using this environment for testing and development purposes.
+              </p>
+            </div>
+            <div className="flex justify-end p-4 border-t border-[#68FFFE]">
+              <Button className="bg-[#68FFFE] text-[#171B37] hover:bg-[#68FFFE]/90 mx-2">
+                <a href="https://hub.conduit.xyz/odyssey" target="_blank" rel="noopener noreferrer">
+                  Odyssey by Conduit
+                </a>
+              </Button>
+              <Button onClick={closeModal} className="bg-[#68FFFE] text-[#171B37] hover:bg-[#68FFFE]/90 mx-2">
+                <a href="https://phisdemo.alwaysbedream.dev" target="_blank" rel="noopener noreferrer">
+                  Continue
+                </a>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Navigation */}
       <nav className="container mx-auto flex items-center justify-between py-6">
         <div className="flex items-center gap-2">
@@ -42,6 +89,10 @@ export default function App() {
                   <Search className="mr-2 h-4 w-4" />
                   Smart Explorer
                 </a>
+              </Button>
+              <Button onClick={openModal} className="bg-[#171B37] text-[#68FFFE] hover:bg-[#68FFFE]/90 hover:text-[#171B37] border border-[#68FFFE]">
+                  <SquareMousePointer className="mr-2 h-4 w-4" />
+                  Demo
               </Button>
             </div>
             <div className="flex items-center gap-6 pt-4">
