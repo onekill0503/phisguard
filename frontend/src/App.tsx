@@ -1,6 +1,7 @@
 import { Button } from "./components/ui/button"
-import { Shield, Chrome, ChromeIcon as Firefox, Github, Check, ArrowRight } from 'lucide-react'
+import { Shield, Chrome, Github, Check, ArrowRight, Search } from 'lucide-react'
 import { Badge } from "./components/ui/badge"
+import Logo from '@/assets/Logo.png'
 
 export default function App() {
   return (
@@ -8,7 +9,7 @@ export default function App() {
       {/* Navigation */}
       <nav className="container mx-auto flex items-center justify-between py-6">
         <div className="flex items-center gap-2">
-          <img src="/public/logo.png" alt="Logo" className="w-12 h-12" />
+          <img src={new URL(Logo, import.meta.url).href} alt="Logo" className="w-12 h-12" />
           <span className="text-xl font-bold">PhisGuard</span>
         </div>
         <div className="flex gap-6">
@@ -31,12 +32,16 @@ export default function App() {
             </p>
             <div className="flex gap-4">
               <Button className="bg-[#68FFFE] text-[#171B37] hover:bg-[#68FFFE]/90">
-                <Chrome className="mr-2 h-4 w-4" />
-                Add to Chrome
+                <a href="https://github.com/onekill0503/phisguard/releases" target="_blank" rel="noreferrer" className="flex items-center gap-2">
+                  <Shield className="mr-2 h-4 w-4" />
+                  Install Phisguard
+                </a>
               </Button>
-              <Button variant="outline" className="border-[#68FFFE] text-[#68FFFE] hover:bg-[#68FFFE]/10">
-                <Firefox className="mr-2 h-4 w-4" />
-                Add to Firefox
+              <Button className="bg-[#171B37] text-[#68FFFE] hover:bg-[#68FFFE]/90 hover:text-[#171B37] border border-[#68FFFE]">
+                <a href="https://smart-explorer.alwaysbedream.dev" target="_blank" rel="noreferrer" className="flex items-center gap-2">
+                  <Search className="mr-2 h-4 w-4" />
+                  Smart Explorer
+                </a>
               </Button>
             </div>
             <div className="flex items-center gap-6 pt-4">
@@ -114,8 +119,10 @@ export default function App() {
           <h2 className="text-3xl font-bold mb-4">Start Protecting Your Assets Today</h2>
           <p className="text-gray-300 mb-8">Join thousands of users who trust PhisGuard for their Web3 security</p>
           <Button className="bg-[#68FFFE] text-[#171B37] hover:bg-[#68FFFE]/90">
-            Install PhisGuard
-            <ArrowRight className="ml-2 h-4 w-4" />
+            <a href="https://github.com/onekill0503/phisguard/releases" target="_blank" rel="noreferrer" className="flex items-center gap-2">
+              Install PhisGuard
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </a>
           </Button>
         </div>
       </section>
