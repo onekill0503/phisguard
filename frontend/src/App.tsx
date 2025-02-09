@@ -57,7 +57,7 @@ export default function App() {
       <nav className="container mx-auto flex items-center justify-between py-6">
         <div className="flex items-center gap-2">
           <img src={new URL(Logo, import.meta.url).href} alt="Logo" className="w-12 h-12" />
-          <span className="text-xl font-bold">PhisGuard</span>
+          <span className="text-xl font-bold">PhisGuard EIP-7702</span>
         </div>
         <div className="flex gap-6">
           <a href="#" className="hover:text-[#68FFFE] transition-colors">Documentation</a>
@@ -70,18 +70,17 @@ export default function App() {
       <section className="container mx-auto py-24">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
-            <h1 className="text-5xl font-bold leading-tight">
-              Secure Your Web3 Transactions with AI-Powered Protection
+            <h1 className="text-4xl font-bold leading-tight">
+              Secure Your Web3 Transactions with AI-Powered Protection And EIP-7702
             </h1>
             <p className="text-lg text-gray-300">
-              PhisGuard uses advanced AI to detect and prevent phishing attempts in real-time, 
-              keeping your crypto assets safe from scams.
+              PhisGuard EIP-7702 delivers a comprehensive wallet security solution in a decentralized manner without sacrificing UX.
             </p>
             <div className="flex gap-4">
               <Button className="bg-[#68FFFE] text-[#171B37] hover:bg-[#68FFFE]/90">
                 <a href="https://github.com/onekill0503/phisguard/releases" target="_blank" rel="noreferrer" className="flex items-center gap-2">
                   <Shield className="mr-2 h-4 w-4" />
-                  Install Phisguard
+                  Install Phisguard EIP-7702
                 </a>
               </Button>
               <Button className="bg-[#171B37] text-[#68FFFE] hover:bg-[#68FFFE]/90 hover:text-[#171B37] border border-[#68FFFE]">
@@ -144,16 +143,16 @@ export default function App() {
         <div className="grid md:grid-cols-3 gap-8">
           {[
             {
-              title: "AI-Powered Analysis",
+              title: "Verifiable AI-Powered Analysis with AVS",
               description: "Real-time scanning of smart contracts and transactions using advanced machine learning algorithms"
             },
             {
-              title: "Phishing Protection",
-              description: "Automatic detection and blocking of suspicious websites and contract interactions"
+              title: "On-chain Phishing Protection",
+              description: "Automatic detection and blocking of suspicious websites and contract interactions on-chain and decentralized using EIP7702 and AVS and AI"
             },
             {
-              title: "Transaction Guard",
-              description: "Detailed analysis of each transaction to prevent unauthorized fund transfers"
+              title: "EIP-7702 Powered",
+              description: "Make the EOA wallet feature-rich by integrating to AI."
             }
           ].map((feature) => (
             <div key={feature.title} className="p-6 rounded-lg bg-[#171B37] border border-[#68FFFE]/20 hover:border-[#68FFFE] transition-colors">
@@ -168,10 +167,10 @@ export default function App() {
       <section className="container mx-auto py-24">
         <div className="bg-gradient-to-r from-[#171B37] to-[#68FFFE]/20 rounded-lg p-12 text-center">
           <h2 className="text-3xl font-bold mb-4">Start Protecting Your Assets Today</h2>
-          <p className="text-gray-300 mb-8">Join thousands of users who trust PhisGuard for their Web3 security</p>
+          <p className="text-gray-300 mb-8">Join users who trust PhisGuard EIP-7702 for their Web3 security</p>
           <Button className="bg-[#68FFFE] text-[#171B37] hover:bg-[#68FFFE]/90">
             <a href="https://github.com/onekill0503/phisguard/releases" target="_blank" rel="noreferrer" className="flex items-center gap-2">
-              Install PhisGuard
+              Install PhisGuard EIP-7702
               <ArrowRight className="ml-2 h-4 w-4" />
             </a>
           </Button>
@@ -182,13 +181,13 @@ export default function App() {
       <footer className="container mx-auto py-12 border-t border-[#68FFFE]/20">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2">
-            <Shield className="h-6 w-6 text-[#68FFFE]" />
-            <span className="font-bold">PhisGuard</span>
+            <img src={new URL(Logo, import.meta.url).href} alt="Logo" className="w-12 h-12" />
+            <span className="font-bold">PhisGuard EIP-7702</span>
           </div>
           <div className="flex gap-6">
             <a href="#" className="text-sm hover:text-[#68FFFE] transition-colors">Privacy Policy</a>
             <a href="#" className="text-sm hover:text-[#68FFFE] transition-colors">Terms of Service</a>
-            <a href="#" className="text-sm hover:text-[#68FFFE] transition-colors">GitHub</a>
+            <a href="https://github.com/onekill0503/phisguard" target="_blank" className="text-sm hover:text-[#68FFFE] transition-colors">GitHub</a>
           </div>
         </div>
       </footer>
