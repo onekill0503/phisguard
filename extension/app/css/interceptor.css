@@ -33,7 +33,7 @@ body { font-family: "Inter" !important; }
 	--positive-color: #4caf50;
 	--negative-color: #f6685e;
 
-	--error-box-color:#FFB6B6;
+	--error-box-color: hsl(206, 70%, 96%);
 	--error-box-text: #000000;
 
 	--warning-box-color:#FFC107;
@@ -48,7 +48,6 @@ body { font-family: "Inter" !important; }
 	--disabled-text-color: rgba(0, 0, 0, 0.5);
 	--disabled-negative-text-color: rgba(246, 104, 94, 0.5);
 	--unimportant-text-color: rgba(0, 0, 0, 0.2);
-	--importance-box-color: rgba(109, 109, 109);
 	--dim-text-color: rgba(255, 255, 255, 0.8);
 	--alpha-005: rgba(255, 255, 255, 0.05);
 	--alpha-015: rgba(255, 255, 255, 0.15);
@@ -268,12 +267,11 @@ li {
 
 .card {
 	background-color: var(--card-bg-color);
-	box-shadow: 0 1px 4px 1px rgba(0, 0, 0, 0.5);
+	box-shadow: 0 1px 1px 1px rgba(0, 0, 0, 0.2);
 }
 
 .card-content {
 	padding: 10px;
-	background-color: var(--card-content-bg-color);
 	border-bottom-left-radius: 0.25rem;
 	border-bottom-right-radius: 0.25rem;
 	border-left: 2px solid var(--card-bg-color);

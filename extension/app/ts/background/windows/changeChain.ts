@@ -31,7 +31,7 @@ export async function resolveChainChange(simulator: Simulator, websiteTabConnect
 	}
 	const data = await getChainChangeConfirmationPromise()
 	if (data === undefined || !doesUniqueRequestIdentifiersMatch(confirmation.data.uniqueRequestIdentifier, data.request.uniqueRequestIdentifier)) throw new Error('Unique request identifier mismatch in change chain')
-		const resolved = await resolve(simulator, websiteTabConnections, confirmation)
+	const resolved = await resolve(simulator, websiteTabConnections, confirmation, data.simulationMode)
 	if (resolved.error !== undefined) {
 		replyToInterceptedRequest(websiteTabConnections, { type: 'result', method: 'wallet_switchEthereumChain' as const, error: resolved.error, uniqueRequestIdentifier: data.request.uniqueRequestIdentifier })
 	} else {
@@ -68,6 +68,7 @@ export const openChangeChainDialog = async (
 	simulator: Simulator,
 	websiteTabConnections: WebsiteTabConnections,
 	request: InterceptedRequest,
+	simulationMode: boolean,
 	website: Website,
 	params: SwitchEthereumChainParams,
 ) => {
@@ -103,6 +104,7 @@ export const openChangeChainDialog = async (
 				website: website,
 				popupOrTabId: openedDialog,
 				request: request,
+				simulationMode: simulationMode,
 				rpcNetwork: await getRpcNetworkForChain(params.params[0].chainId),
 			})
 			await updateChainChangeViewWithPendingRequest()
@@ -114,7 +116,7 @@ export const openChangeChainDialog = async (
 		const reply = await pendForUserReply
 
 		// forward message to content script
-		return resolve(simulator, websiteTabConnections, reply)
+		return resolve(simulator, websiteTabConnections, reply, simulationMode)
 	} finally {
 		removeWindowTabListeners(onCloseWindow, onCloseTab)
 		pendForUserReply = undefined
@@ -123,11 +125,15 @@ export const openChangeChainDialog = async (
 	}
 }
 
-async function resolve(simulator: Simulator, websiteTabConnections: WebsiteTabConnections, reply: ChainChangeConfirmation) {
+async function resolve(simulator: Simulator, websiteTabConnections: WebsiteTabConnections, reply: ChainChangeConfirmation, simulationMode: boolean) {
 	await setChainChangeConfirmationPromise(undefined)
 	if (reply.data.accept) {
+		if (simulationMode) {
+			await changeActiveRpc(simulator, websiteTabConnections, reply.data.rpcNetwork, simulationMode)
+			return { result: null }
+		}
 		pendForSignerReply = new Future<SignerChainChangeConfirmation>() // when not in simulation mode, we need to get reply from the signer too
-		await changeActiveRpc(simulator, websiteTabConnections, reply.data.rpcNetwork)
+		await changeActiveRpc(simulator, websiteTabConnections, reply.data.rpcNetwork, simulationMode)
 		const signerReply = await pendForSignerReply
 		if (signerReply.data[0].accept === false) return { error: signerReply.data[0].error } as const // forward signers error to the application
 		if (signerReply.data[0].chainId === reply.data.rpcNetwork.chainId) return { result: null }

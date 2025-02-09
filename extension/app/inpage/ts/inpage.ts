@@ -185,8 +185,11 @@ class InterceptorMessageListener {
 	private pendingSignerAddressRequest: InterceptorFuture<boolean> | undefined = undefined
 
 	public constructor() {
+		console.log('Inpage.ts: constructor: 0')
 		this.injectEthereumIntoWindow()
+		console.log('Inpage.ts: constructor: 1')
 		this.onPageLoad()
+		console.log('Inpage.ts: constructor: 2')
 	}
 
 	private readonly WindowEthereumIsConnected = () => this.connected
@@ -518,18 +521,23 @@ class InterceptorMessageListener {
 			|| !('interceptorApproved' in messageEvent.data)
 		) return
 		try {
+			console.log('Inpage.ts: onMessage: 0', messageEvent)
 			if (!('ethereum' in window) || !window.ethereum) throw new Error('window.ethereum missing')
 			if (!('method' in messageEvent.data)) throw new Error('missing method field')
 			if (!('type' in messageEvent)) throw new Error('missing type field')
 			const forwardRequest = messageEvent.data as InterceptedRequestForward //use 'as' here as we don't want to inject funtypes here
+			console.log('Inpage.ts: onMessage: 1')
 			if (forwardRequest.type === 'result' && 'error' in forwardRequest) {
 				if (forwardRequest.requestId === undefined) throw new EthereumJsonRpcError(forwardRequest.error.code, forwardRequest.error.message, forwardRequest.error.data)
 				const pending = this.outstandingRequests.get(forwardRequest.requestId)
 				if (pending === undefined) throw new EthereumJsonRpcError(forwardRequest.error.code, forwardRequest.error.message, forwardRequest.error.data)
 				return pending.reject(new EthereumJsonRpcError(forwardRequest.error.code, forwardRequest.error.message, forwardRequest.error.data))
 			}
+			console.log('Inpage.ts: onMessage: 2')
 			if (forwardRequest.type === 'result' && 'result' in forwardRequest) {
+				console.log('Inpage.ts: onMessage: 3')
 				if (this.metamaskCompatibilityMode && this.signerWindowEthereumRequest === undefined && window.ethereum !== undefined) {
+					console.log('Inpage.ts: onMessage: 4')
 					switch (messageEvent.data.method) {
 						case 'eth_requestAccounts':
 						case 'eth_accounts': {
@@ -554,18 +562,25 @@ class InterceptorMessageListener {
 				await this.handleReplyRequest(forwardRequest)
 				return
 			}
+			console.log('Inpage.ts: onMessage: 5')
 			if (forwardRequest.type !== 'forwardToSigner') throw new Error('type: forwardToSigner missing')
+			console.log('Inpage.ts: onMessage: 6')
 			if (forwardRequest.requestId === undefined) throw new Error('requestId missing')
 			const pendingRequest = this.outstandingRequests.get(forwardRequest.requestId)
 			if (pendingRequest === undefined) throw new Error('Request did not exist anymore')
+			console.log('Inpage.ts: onMessage: 7')
 			const signerRequest = this.signerWindowEthereumRequest
 			if (signerRequest === undefined) throw new Error('Interceptor is in wallet mode and should not forward to an external wallet')
+			console.log('Inpage.ts: onMessage: 8')
 
 			const sendToSignerWithCatchError = async () => {
 				try {
+					console.log('Inpage.ts: onMessage: 9', forwardRequest)
 					const reply = await signerRequest({ method: forwardRequest.method, params: 'params' in forwardRequest ? forwardRequest.params : [] })
+					console.log('Inpage.ts: onMessage: 10')
 					return { success: true as const, forwardRequest, reply }
 				} catch(error: unknown) {
+					console.log('Inpage.ts: onMessage: 11')
 					return { success: false as const, forwardRequest, error }
 				}
 			}

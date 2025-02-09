@@ -31,6 +31,7 @@ function injectScript(_content: string) {
 		let extensionPort: browser.runtime.Port | undefined = undefined
 	
 		// forward all message events to the background script, which will then filter and process them
+		// biome-ignore lint/suspicious/noExplicitAny: MessageEvent default signature
 		globalThis.addEventListener('message', (messageEvent: MessageEvent<any>) => {
 			if (extensionPort === undefined) return
 			try {
@@ -111,4 +112,5 @@ function injectScript(_content: string) {
 	}
 }
 
+// biome-ignore lint/style/noUnusedTemplateLiteral: Required for script injection
 injectScript(`[[injected.ts]]`)

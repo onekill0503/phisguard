@@ -1,6 +1,6 @@
 {
 	"name": "PhisGuard",
-	"description": "Understand Ethereum transactions before risking assets. Simulate actions and spot scams to avoid mistakes before signing anything.",
+	"description": "Browser extension that protect you from phishing attacks.",
 	"version": "0.0.0",
 	"manifest_version": 3,
 	"action": {
@@ -21,7 +21,8 @@
 		"activeTab",
 		"storage",
 		"scripting",
-		"declarativeNetRequest"
+		"declarativeNetRequest",
+		"webRequest"
 	],
 	"web_accessible_resources": [
 		{
@@ -30,7 +31,7 @@
 		}
 	],
 	"content_security_policy": {
-		"extension_pages": "script-src 'self'; object-src 'self'"
+		"extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;"
 	},
 	"host_permissions": [
 		"file://*/*",

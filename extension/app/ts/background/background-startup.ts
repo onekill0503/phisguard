@@ -1,25 +1,27 @@
 import 'webextension-polyfill'
-import { addWindowTabListeners } from '../components/ui-utils.js'
-import { EthereumClientService } from '../simulation/services/EthereumClientService.js'
+import { defaultRpcs, getSettings } from './settings.js'
+import { handleInterceptedRequest, popupMessageHandler } from './background.js'
+import { retrieveWebsiteDetails, updateExtensionBadge, updateExtensionIcon } from './iconHandler.js'
+import { clearTabStates, getPrimaryRpcForChain, removeTabState, setRpcConnectionStatus, updateTabState, updateUserAddressBookEntries, updateUserAddressBookEntriesV2Old } from './storageVariables.js'
 import { Simulator } from '../simulation/simulator.js'
-import { AddressBookEntries, AddressBookEntry } from '../types/addressBookTypes.js'
 import { TabConnection, TabState, WebsiteTabConnections } from '../types/user-interface-types.js'
 import { EthereumBlockHeader } from '../types/wire-types.js'
-import { updateContentScriptInjectionStrategyManifestV2 } from '../utils/contentScriptsUpdating.js'
-import { handleUnexpectedError, isNewBlockAbort } from '../utils/errors.js'
-import { RawInterceptedRequest, checkAndThrowRuntimeLastError } from '../utils/requests.js'
-import { Semaphore } from '../utils/semaphore.js'
-import { OldActiveAddressEntry, browserStorageLocalGet, browserStorageLocalRemove } from '../utils/storageUtils.js'
-import { getUniqueItemsByProperties } from '../utils/typed-arrays.js'
-import { modifyObject } from '../utils/typescript.js'
-import { updateDeclarativeNetRequestBlocks } from './accessManagement.js'
-import { handleInterceptedRequest, popupMessageHandler } from './background.js'
+import { EthereumClientService } from '../simulation/services/EthereumClientService.js'
 import { getSocketFromPort, sendPopupMessageToOpenWindows, websiteSocketToString } from './backgroundUtils.js'
-import { retrieveWebsiteDetails, setInterceptorIcon, updateExtensionBadge } from './iconHandler.js'
-import { defaultRpcs, getSettings } from './settings.js'
+import { sendSubscriptionMessagesForNewBlock } from '../simulation/services/EthereumSubscriptionService.js'
+import { Semaphore } from '../utils/semaphore.js'
+import { RawInterceptedRequest, checkAndThrowRuntimeLastError } from '../utils/requests.js'
+import { ICON_NOT_ACTIVE } from '../utils/constants.js'
+import { handleUnexpectedError, isNewBlockAbort } from '../utils/errors.js'
+import { updateContentScriptInjectionStrategyManifestV2 } from '../utils/contentScriptsUpdating.js'
 import { checkIfInterceptorShouldSleep } from './sleeping.js'
-import { clearTabStates, getPrimaryRpcForChain, removeTabState, setRpcConnectionStatus, updateTabState, updateUserAddressBookEntries, updateUserAddressBookEntriesV2Old } from './storageVariables.js'
+import { addWindowTabListeners } from '../components/ui-utils.js'
 import { onCloseWindowOrTab } from './windows/confirmTransaction.js'
+import { modifyObject } from '../utils/typescript.js'
+import { OldActiveAddressEntry, browserStorageLocalGet, browserStorageLocalRemove } from '../utils/storageUtils.js'
+import { AddressBookEntries, AddressBookEntry } from '../types/addressBookTypes.js'
+import { getUniqueItemsByProperties } from '../utils/typed-arrays.js'
+import { updateDeclarativeNetRequestBlocks } from './accessManagement.js'
 
 const websiteTabConnections = new Map<number, TabConnection>()
 
@@ -145,10 +147,10 @@ async function onContentScriptConnected(simulator: Simulator, port: browser.runt
 		await updateTabState(socket.tabId, (previousState: TabState) => {
 			return modifyObject(previousState, {
 				website: { websiteOrigin, icon: undefined, title: undefined },
-				tabIconDetails: { iconReason: 'Extension has been activated' },
+				tabIconDetails: { icon: ICON_NOT_ACTIVE, iconReason: 'No active address selected.' },
 			})
 		})
-		setInterceptorIcon(socket.tabId, 'Extension has been activated')
+		updateExtensionIcon(websiteTabConnections, socket.tabId, websiteOrigin)
 	} else {
 		tabConnection.connections[identifier] = newConnection
 	}
@@ -163,7 +165,7 @@ async function onContentScriptConnected(simulator: Simulator, port: browser.runt
 	}
 }
 
-async function newBlockAttemptCallback(blockheader: EthereumBlockHeader, ethereumClientService: EthereumClientService, _: boolean, simulator: Simulator) {
+async function newBlockAttemptCallback(blockheader: EthereumBlockHeader, ethereumClientService: EthereumClientService, isNewBlock: boolean, simulator: Simulator) {
 	if (ethereumClientService.getChainId() !== simulator.ethereum.getChainId()) throw new Error(`Chain Id Mismatch, node is on ${ ethereumClientService.getChainId() } while simulator is on ${ simulator.ethereum.getChainId() }`)
 	if (blockheader === null) throw new Error('The latest block is null')
 	try {
@@ -177,9 +179,9 @@ async function newBlockAttemptCallback(blockheader: EthereumBlockHeader, ethereu
 		await setRpcConnectionStatus(rpcConnectionStatus)
 		await updateExtensionBadge()
 		await sendPopupMessageToOpenWindows({ method: 'popup_new_block_arrived', data: { rpcConnectionStatus } })
-		// if (isNewBlock) {
-		// 	return await sendSubscriptionMessagesForNewBlock(blockheader.number, ethereumClientService, undefined, websiteTabConnections)
-		// }
+		if (isNewBlock) {
+			return await sendSubscriptionMessagesForNewBlock(blockheader.number, ethereumClientService, undefined, websiteTabConnections)
+		}
 	} catch(error) {
 		if (error instanceof Error && isNewBlockAbort(error)) return
 		await handleUnexpectedError(error)
@@ -217,6 +219,7 @@ async function startup() {
 			const website = { websiteOrigin, ...await retrieveWebsiteDetails(tabId) }
 			await updateTabState(tabId, (previousState: TabState) => modifyObject(previousState, { website }))
 			await updateDeclarativeNetRequestBlocks(websiteTabConnections)
+			await updateExtensionIcon(websiteTabConnections, tabId, websiteOrigin)
 		})
 	})
 	browser.runtime.onConnect.addListener((port) => catchAllErrorsAndCall(() => onContentScriptConnected(simulator, port, websiteTabConnections)))

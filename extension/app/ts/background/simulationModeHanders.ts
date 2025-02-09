@@ -1,8 +1,8 @@
 import { EthereumClientService } from '../simulation/services/EthereumClientService.js'
-import { getInputFieldFromDataOrInput, getSimulatedBalance, getSimulatedBlock, getSimulatedBlockByHash, getSimulatedBlockNumber, getSimulatedCode, getSimulatedTransactionByHash, getSimulatedTransactionCount, getSimulatedTransactionReceipt, simulatedCall, simulateEstimateGas } from '../simulation/services/SimulationModeEthereumClientService.js'
+import { getInputFieldFromDataOrInput, getSimulatedBalance, getSimulatedBlock, getSimulatedBlockByHash, getSimulatedBlockNumber, getSimulatedCode, getSimulatedFeeHistory, getSimulatedTransactionByHash, getSimulatedTransactionCount, getSimulatedTransactionReceipt, simulatedCall, simulateEstimateGas } from '../simulation/services/SimulationModeEthereumClientService.js'
 import { Simulator } from '../simulation/simulator.js'
 import { SignMessageParams } from '../types/jsonRpc-signing-types.js'
-import { EstimateGasParams, EthBalanceParams, EthBlockByHashParams, EthBlockByNumberParams, EthCallParams, GetCode, GetTransactionCount, InterceptorError, SendRawTransactionParams, SendTransactionParams, SwitchEthereumChainParams, TransactionByHashParams, TransactionReceiptParams } from '../types/JsonRpc-types.js'
+import { EstimateGasParams, EthBalanceParams, EthBlockByHashParams, EthBlockByNumberParams, EthCallParams, FeeHistory, GetCode, GetTransactionCount, InterceptorError, SendRawTransactionParams, SendTransactionParams, SwitchEthereumChainParams, TransactionByHashParams, TransactionReceiptParams } from '../types/JsonRpc-types.js'
 import { WebsiteTabConnections } from '../types/user-interface-types.js'
 import { SimulationState } from '../types/visualizer-types.js'
 import { Website } from '../types/websiteAccessTypes.js'
@@ -36,9 +36,10 @@ export async function sendTransaction(
 	transactionParams: SendTransactionParams | SendRawTransactionParams,
 	request: InterceptedRequest,
 	website: Website,
-	websiteTabConnections: WebsiteTabConnections
+	websiteTabConnections: WebsiteTabConnections,
+	simulationMode = true,
 ) {
-	const action = await openConfirmTransactionDialogForTransaction(simulator, request, transactionParams, activeAddress, website, websiteTabConnections)
+	const action = await openConfirmTransactionDialogForTransaction(simulator, request, transactionParams, simulationMode, activeAddress, website, websiteTabConnections)
 	if (action.type === 'doNotReply') return action
 	return { method: transactionParams.method, ...action }
 }
@@ -106,19 +107,20 @@ export async function personalSign(
 	transactionParams: SignMessageParams,
 	request: InterceptedRequest,
 	website: Website,
-	websiteTabConnections: WebsiteTabConnections
+	websiteTabConnections: WebsiteTabConnections,
+	simulationMode = true,
 ) {
-	const action = await openConfirmTransactionDialogForMessage(simulator, ethereumClientService, request, transactionParams, activeAddress, website, websiteTabConnections)
+	const action = await openConfirmTransactionDialogForMessage(simulator, ethereumClientService, request, transactionParams, simulationMode, activeAddress, website, websiteTabConnections)
 	if (action.type === 'doNotReply') return action
 	return { method: transactionParams.method, ...action }
 }
 
-export async function switchEthereumChain(simulator: Simulator, websiteTabConnections: WebsiteTabConnections, ethereumClientService: EthereumClientService, params: SwitchEthereumChainParams, request: InterceptedRequest, website: Website) {
+export async function switchEthereumChain(simulator: Simulator, websiteTabConnections: WebsiteTabConnections, ethereumClientService: EthereumClientService, params: SwitchEthereumChainParams, request: InterceptedRequest, simulationMode: boolean, website: Website) {
 	if (ethereumClientService.getChainId() === params.params[0].chainId) {
 		// we are already on the right chain
 		return { type: 'result' as const, method: params.method, result: null }
 	}
-	const change = await openChangeChainDialog(simulator, websiteTabConnections, request, website, params)
+	const change = await openChangeChainDialog(simulator, websiteTabConnections, request, simulationMode, website, params)
 	return { type: 'result' as const, method: params.method, ...change }
 }
 
@@ -134,6 +136,10 @@ export async function getTransactionCount(ethereumClientService: EthereumClientS
 
 export async function web3ClientVersion(ethereumClientService: EthereumClientService) {
 	return { type: 'result' as const, method: 'web3_clientVersion' as const, result: await ethereumClientService.web3ClientVersion(undefined) }
+}
+
+export async function feeHistory(ethereumClientService: EthereumClientService, request: FeeHistory) {
+	return { type: 'result' as const, method: 'eth_feeHistory' as const, result: await getSimulatedFeeHistory(ethereumClientService, undefined, request) }
 }
 
 export async function handleIterceptorError(request: InterceptorError) {
