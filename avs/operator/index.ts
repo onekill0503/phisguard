@@ -59,15 +59,19 @@ const signAndRespondToTask = async (taskIndex: number, task: Task) => {
         [operators, signatures, ethers.toBigInt(await provider.getBlockNumber()-1)]
     );
     const causeBytes = ethers.AbiCoder.defaultAbiCoder().encode(["string"] , [cause]);
-    const tx = await helloWorldServiceManager.respondToTask(
-        [task.createdBlock, task.from, task.to, task.data, task.value],
-        taskIndex,
-        signedTask,
-        isSafe,
-        causeBytes,
-        { gasLimit: 2000000 }
-    );
-    await tx.wait();
+    try {
+        const tx = await helloWorldServiceManager.respondToTask(
+            [task.createdBlock, task.from, task.to, task.data, task.value],
+            taskIndex,
+            signedTask,
+            isSafe,
+            causeBytes,
+            { gasLimit: 2000000 }
+        );
+        await tx.wait();
+    }catch(err: any){
+        console.log(`Error : ${err.message}`);
+    }
     console.log(`Responded to task with hash : ${ tx.hash }.`);
 };
 
@@ -92,12 +96,61 @@ const getAiAnalysis = async (data: string, task: Task ) => {
     let isSafe : boolean = false;
     let analysis : string = "Analysis not available";
     try {
-        const message = `Hey, Can you analyze this result of debug_traceCall for me? ${data}, is this possibly phishing or not safe ?, this transaction from ${task.from} to ${task.to} with value ${task.value}. response with json only with format { safe: boolean, cause: string }. no additional text and limit cause only max 280 characters`;
+        const message = `
+You are an expert Ethereum security analyst with extensive knowledge of phishing transaction patterns and Solidity code. Your task is to analyze a given transaction and determine if it's potentially a phishing attempt or safe.
+
+Here are the details of the transaction you need to analyze:
+
+Transaction from: <transaction_from>${task.to}</transaction_from>
+Transaction to: <transaction_to>${task.to}</transaction_to>
+Transaction value: <transaction_value>${task.value}</transaction_value>
+
+Debug trace call result:
+<debug_trace_call>
+${data}
+</debug_trace_call>
+
+Please analyze this transaction carefully and determine if it's safe or potentially a phishing attempt. Follow these steps in your analysis:
+
+1. Determine the type of transaction (transfer, approve, or contract interaction).
+2. For transfers, check if it's a simple ETH transfer or involves a smart contract.
+3. For approve functions, investigate the reputation of the approved contract.
+4. For other contract interactions, analyze the debug_traceCall result.
+5. Check if funds are sent without receiving anything in return.
+6. Determine if it's a legitimate operation like staking.
+7. If possible, review the smart contract's source code for potential phishing indicators.
+
+In your analysis, consider these important points:
+- Transfer transactions signed by the wallet owner are generally not phishing.
+- Transfers to smart contracts with data "0x" are allowed as they are just transfer transactions.
+- New smart contracts without source code are potentially suspicious.
+- Legitimate staking operations may involve sending funds without immediate return.
+
+Before providing your final assessment, use <transaction_analysis> tags to show your reasoning process. In this section:
+a. Identify and quote key information from the transaction details.
+b. Classify the transaction type and list evidence for the classification.
+c. Analyze potential risks and legitimate scenarios, listing pros and cons for each.
+d. Summarize your findings before making a final determination.
+
+It's okay for this section to be quite long to ensure a thorough analysis. Consider multiple factors and potential false positives to ensure accurate detection.
+
+After your analysis, provide your conclusion in the following json format:
+{
+  "safe": boolean,
+  "cause": string
+}
+
+The "cause" string should explain your conclusion in no more than 280 characters. No additional text just the json response only.
+
+Remember, accuracy is crucial in detecting phishing transactions. Take into account all available information and potential legitimate scenarios before making your final determination.
+        `;
         const response = await axios.post(`https://autonome.alt.technology/${agentId}/chat`, {
             message: message,
         } , {
             headers: { Authorization: `Basic ${basicKey}` }
         });
+        // const response = await axios.post(`http://localhost:6699/chat`, { message });
+        console.log(`Response from agent : ${response.data.text}`);
         const responseJSON = JSON.parse(response.data.text);
         isSafe = responseJSON.safe;
         analysis = responseJSON.cause;
